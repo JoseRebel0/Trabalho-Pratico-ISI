@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Locais monitorizados: Braga, Barcelos, Porto e Lisboa.
+  - globalIdLocal / idAreaAviso: códigos do IPMA (https://api.ipma.pt/open-data/distrits-islands.json)
+  - Barcelos NÃO existe na lista de previsões do IPMA: fica com globalIdLocal vazio e a previsão
+    vem da Open-Meteo (fontePrevisao="OPENMETEO"). Os avisos usam a área BRG (distrito de Braga).
+  - O sensor ARD-01 está no IPCA, em Barcelos.
+  Lido pelo Pentaho (passo "Get data from XML", XPath /monitorizacao/locais/local)
+  e pelo KNIME (nó "XML Reader" + "XPath", XPath /monitorizacao/sensores/sensor).
+-->
+<monitorizacao>
+  <locais>
+    <local globalIdLocal="1030300" idAreaAviso="BRG" fontePrevisao="IPMA">
+      <nome>Braga</nome>
+      <distrito>Braga</distrito>
+      <latitude>41.5475</latitude>
+      <longitude>-8.4227</longitude>
+    </local>
+    <local globalIdLocal="" idAreaAviso="BRG" fontePrevisao="OPENMETEO">
+      <nome>Barcelos</nome>
+      <distrito>Braga</distrito>
+      <latitude>41.5388</latitude>
+      <longitude>-8.6151</longitude>
+    </local>
+    <local globalIdLocal="1131200" idAreaAviso="PTO" fontePrevisao="IPMA">
+      <nome>Porto</nome>
+      <distrito>Porto</distrito>
+      <latitude>41.1580</latitude>
+      <longitude>-8.6294</longitude>
+    </local>
+    <local globalIdLocal="1110600" idAreaAviso="LSB" fontePrevisao="IPMA">
+      <nome>Lisboa</nome>
+      <distrito>Lisboa</distrito>
+      <latitude>38.7660</latitude>
+      <longitude>-9.1286</longitude>
+    </local>
+  </locais>
+
+  <sensores>
+    <sensor id="ARD-01" tipo="DHT22">
+      <descricao>Arduino Uno + DHT22 — sala de aula IPCA (Barcelos)</descricao>
+      <local>Barcelos</local>
+    </sensor>
+    <sensor id="SIM-01" tipo="SIMULADO">
+      <descricao>Sensor simulado no Node-RED (testes / plano B)</descricao>
+      <local>Barcelos</local>
+    </sensor>
+  </sensores>
+</monitorizacao>

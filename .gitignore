@@ -1,0 +1,15 @@
+# dados gerados em execução (manter só as pastas)
+data/sensores/*
+data/exportacoes/*
+data/logs/*
+data/amostras/*
+!data/**/.gitkeep
+
+# KNIME / Pentaho
+knime/**/.metadata/
+*.kettle-backup
+.kettle/
+
+# sistema
+.DS_Store
+node-red/.userdir/

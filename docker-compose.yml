@@ -1,0 +1,68 @@
+# ISI TP1 — Monitorização Ambiental (Braga, Barcelos, Porto, Lisboa)
+# Infraestrutura comum: base de dados, broker MQTT, dashboard, email e SFTP de teste.
+# Arrancar:  docker compose up -d
+# Parar:     docker compose down        (os dados ficam nos volumes)
+# Reset BD:  docker compose down -v     (apaga tudo e volta a correr db/init/*.sql)
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: isi_postgres
+    environment:
+      POSTGRES_DB: ambiente
+      POSTGRES_USER: isi
+      POSTGRES_PASSWORD: isi2026
+      TZ: Europe/Lisbon
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+
+  adminer:                      # interface web para ver a BD: http://localhost:8080
+    image: adminer:4
+    container_name: isi_adminer
+    ports:
+      - "8080:8080"
+    depends_on: [postgres]
+
+  mosquitto:                    # broker MQTT: localhost:1883
+    image: eclipse-mosquitto:2
+    container_name: isi_mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  grafana:                      # dashboard: http://localhost:3000 (admin / admin)
+    image: grafana/grafana:11.2.0
+    container_name: isi_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [postgres]
+
+  mailpit:                      # servidor de email de teste: SMTP localhost:1025, caixa em http://localhost:8025
+    image: axllent/mailpit:v1.20
+    container_name: isi_mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  sftp:                         # servidor SFTP de teste: localhost:2222, user isi / pass isi2026, pasta /upload
+    image: atmoz/sftp:alpine
+    platform: linux/amd64       # imagem só existe para Intel; corre em emulação nos Mac M
+    container_name: isi_sftp
+    ports:
+      - "2222:22"
+    command: isi:isi2026:::upload
+
+volumes:
+  pgdata:
+  grafana:

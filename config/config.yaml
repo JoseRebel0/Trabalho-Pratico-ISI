@@ -1,0 +1,50 @@
+# =====================================================================
+# ISI TP1 — Configuração do processo ETL (lida pelo Pentaho com o passo "YAML Input")
+# Alterar aqui os limites/destinos sem mexer nas transformações.
+# =====================================================================
+
+projeto:
+  nome: Monitorização Ambiental — Braga, Barcelos, Porto e Lisboa
+  versao: 1.0
+
+apis:
+  ipma_previsao: https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/{globalIdLocal}.json
+  ipma_avisos: https://api.ipma.pt/open-data/forecast/warnings/warnings_www.json
+  ipma_estados_tempo: https://api.ipma.pt/open-data/weather-type-classe.json
+  ipma_classes_vento: https://api.ipma.pt/open-data/wind-speed-daily-classe.json
+  openmeteo_previsao: https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,weather_code&timezone=Europe%2FLisbon&forecast_days=5   # só Barcelos (não existe no IPMA)
+  qualidade_ar: https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&hourly=pm10,pm2_5,nitrogen_dioxide,ozone&timezone=Europe%2FLisbon&past_days=1&forecast_days=1
+
+# Limites usados nas validações e nos alertas
+limites:
+  pm10_diario: 50          # µg/m³ — valor-limite diário (DL 102/2010 / Diretiva 2008/50/CE)
+  pm10_horario_alerta: 50  # µg/m³ — conta horas acima deste valor
+  pm2_5_diario: 25         # µg/m³
+  temperatura_min: -15     # °C — abaixo disto a leitura do sensor é considerada inválida
+  temperatura_max: 50      # °C
+  humidade_min: 0          # %
+  humidade_max: 100        # %
+  nivel_aviso_alerta: 3    # 1=verde 2=amarelo 3=laranja 4=vermelho — alerta a partir deste nível
+
+mqtt:
+  broker: localhost
+  porta: 1883
+  topico_leituras: isi/sensores/+/leituras
+  topico_alertas: isi/alertas
+
+email:
+  smtp_servidor: localhost   # Mailpit (docker) — trocar por smtp.gmail.com:587 para envio real
+  smtp_porta: 1025
+  remetente: etl-ambiente@isi.local
+  destinatarios:
+    - grupo@isi.local
+
+sftp:
+  servidor: localhost
+  porta: 2222
+  utilizador: isi
+  pasta_remota: /upload
+
+exportacao:
+  pasta: data/exportacoes
+  formatos: [csv, json, xml, sql]

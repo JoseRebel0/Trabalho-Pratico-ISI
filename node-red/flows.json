@@ -1,0 +1,390 @@
+[
+  {
+    "id": "tab_arduino",
+    "type": "tab",
+    "label": "Arduino → MQTT",
+    "disabled": false,
+    "info": "Lê o Arduino pela porta série (USB), valida e publica no Mosquitto.\nAlterar a porta no nó de configuração 'Arduino' (ls /dev/cu.usbmodem*).\nRequer: node-red-node-serialport"
+  },
+  {
+    "id": "a_serial",
+    "type": "serial in",
+    "z": "tab_arduino",
+    "name": "Arduino (USB)",
+    "serial": "cfg_serial",
+    "x": 130,
+    "y": 80,
+    "wires": [
+      [
+        "a_json"
+      ]
+    ]
+  },
+  {
+    "id": "a_json",
+    "type": "json",
+    "z": "tab_arduino",
+    "name": "texto → objeto",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 310,
+    "y": 80,
+    "wires": [
+      [
+        "a_prep"
+      ]
+    ]
+  },
+  {
+    "id": "a_prep",
+    "type": "function",
+    "z": "tab_arduino",
+    "name": "validar + timestamp",
+    "func": "// Valida a linha recebida do Arduino e acrescenta data/hora (o Arduino não tem relógio)\nconst p = msg.payload;\nif (typeof p !== 'object' || !p.sensor) {\n    node.warn('Linha ignorada (não é JSON válido): ' + JSON.stringify(p));\n    return null;\n}\np.ts = new Date().toISOString();\np.origem = 'arduino';\nmsg.topic = 'isi/sensores/' + p.sensor + '/leituras';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 500,
+    "y": 80,
+    "wires": [
+      [
+        "a_mqtt",
+        "a_dbg"
+      ]
+    ]
+  },
+  {
+    "id": "a_mqtt",
+    "type": "mqtt out",
+    "z": "tab_arduino",
+    "name": "publicar leitura",
+    "topic": "",
+    "qos": "0",
+    "retain": "false",
+    "broker": "cfg_broker",
+    "x": 720,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "a_dbg",
+    "type": "debug",
+    "z": "tab_arduino",
+    "name": "debug Arduino",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 720,
+    "y": 130,
+    "wires": []
+  },
+  {
+    "id": "a_cmt",
+    "type": "comment",
+    "z": "tab_arduino",
+    "name": "Alertas do ETL → LED do Arduino (fase L)",
+    "info": "",
+    "x": 220,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "a_alin",
+    "type": "mqtt in",
+    "z": "tab_arduino",
+    "name": "isi/alertas",
+    "topic": "isi/alertas",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "cfg_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 250,
+    "wires": [
+      [
+        "a_alf"
+      ]
+    ]
+  },
+  {
+    "id": "a_alf",
+    "type": "function",
+    "z": "tab_arduino",
+    "name": "alerta → 'A' / 'N'",
+    "func": "// Recebe alertas publicados pelo ETL em isi/alertas e liga/desliga o LED do Arduino\n// payload esperado: {\"nivel\":\"ALERTA\"} ou {\"nivel\":\"NORMAL\"}\nconst n = (msg.payload && msg.payload.nivel) || String(msg.payload);\nmsg.payload = (n.toUpperCase() === 'ALERTA') ? 'A' : 'N';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 320,
+    "y": 250,
+    "wires": [
+      [
+        "a_serout"
+      ]
+    ]
+  },
+  {
+    "id": "a_serout",
+    "type": "serial out",
+    "z": "tab_arduino",
+    "name": "Arduino (USB)",
+    "serial": "cfg_serial",
+    "x": 530,
+    "y": 250,
+    "wires": []
+  },
+  {
+    "id": "cfg_serial",
+    "type": "serial-port",
+    "name": "Arduino",
+    "serialport": "/dev/cu.usbmodem1101",
+    "serialbaud": "9600",
+    "databits": "8",
+    "parity": "none",
+    "stopbits": "1",
+    "waitfor": "",
+    "dtr": "none",
+    "rts": "none",
+    "cts": "none",
+    "dsr": "none",
+    "newline": "\\n",
+    "bin": "false",
+    "out": "char",
+    "addchar": "",
+    "responsetimeout": "10000"
+  },
+  {
+    "id": "tab_sim",
+    "type": "tab",
+    "label": "Simulador → MQTT",
+    "disabled": true,
+    "info": "Sensor simulado (plano B / testes). Gera leituras a cada 10 s com erros de propósito\n(nan, valores fora de gama, duplicados) para testar a limpeza no ETL."
+  },
+  {
+    "id": "s_inj",
+    "type": "inject",
+    "z": "tab_sim",
+    "name": "a cada 10 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "10",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 130,
+    "y": 80,
+    "wires": [
+      [
+        "s_fn"
+      ]
+    ]
+  },
+  {
+    "id": "s_fn",
+    "type": "function",
+    "z": "tab_sim",
+    "name": "gerar leitura SIM-01",
+    "func": "// Sensor simulado: valores realistas + erros de propósito para testar a limpeza no ETL\nconst seq = (context.get('seq') || 0) + 1;\ncontext.set('seq', seq);\nconst hora = new Date().getHours() + new Date().getMinutes() / 60;\n// temperatura segue um ciclo diário (mín. ~5h, máx. ~15h)\nlet temp = 17 + 5 * Math.sin((hora - 9) / 24 * 2 * Math.PI) + (Math.random() - 0.5);\nlet hum  = 70 - 15 * Math.sin((hora - 9) / 24 * 2 * Math.PI) + (Math.random() - 0.5) * 3;\ntemp = Math.round(temp * 100) / 100;\nhum  = Math.round(hum * 100) / 100;\nconst r = Math.random();\nif (r < 0.04)      temp = 'nan';     // falha de leitura\nelse if (r < 0.07) temp = 85.0;      // valor absurdo (fora de gama)\nelse if (r < 0.09) hum  = -3;        // humidade impossível\nmsg.payload = { sensor: 'SIM-01', seq: seq, temp: temp, hum: hum,\n                ts: new Date().toISOString(), origem: 'simulador' };\n// de vez em quando repete a mensagem (duplicado) para testar remoção de duplicados\nif (Math.random() < 0.03) { node.send({ payload: msg.payload, topic: 'isi/sensores/SIM-01/leituras' }); }\nmsg.topic = 'isi/sensores/SIM-01/leituras';\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 340,
+    "y": 80,
+    "wires": [
+      [
+        "s_mqtt",
+        "s_dbg"
+      ]
+    ]
+  },
+  {
+    "id": "s_mqtt",
+    "type": "mqtt out",
+    "z": "tab_sim",
+    "name": "publicar leitura",
+    "topic": "",
+    "qos": "0",
+    "retain": "false",
+    "broker": "cfg_broker",
+    "x": 570,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "s_dbg",
+    "type": "debug",
+    "z": "tab_sim",
+    "name": "debug simulador",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 580,
+    "y": 130,
+    "wires": []
+  },
+  {
+    "id": "tab_grav",
+    "type": "tab",
+    "label": "MQTT → ficheiros",
+    "disabled": false,
+    "info": "Subscreve todas as leituras (Arduino e simulador) e grava-as em data/sensores/\n(JSON Lines e CSV). São estes ficheiros que o KNIME lê.\nArrancar o Node-RED a partir da pasta do projeto para os caminhos relativos funcionarem."
+  },
+  {
+    "id": "g_min",
+    "type": "mqtt in",
+    "z": "tab_grav",
+    "name": "Leituras (todos os sensores)",
+    "topic": "isi/sensores/+/leituras",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "cfg_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 170,
+    "y": 120,
+    "wires": [
+      [
+        "g_jsonl",
+        "g_fcsv",
+        "g_dbg2"
+      ]
+    ]
+  },
+  {
+    "id": "g_jsonl",
+    "type": "json",
+    "z": "tab_grav",
+    "name": "objeto → texto JSON",
+    "property": "payload",
+    "action": "str",
+    "pretty": false,
+    "x": 430,
+    "y": 80,
+    "wires": [
+      [
+        "g_fjson"
+      ]
+    ]
+  },
+  {
+    "id": "g_fjson",
+    "type": "file",
+    "z": "tab_grav",
+    "name": "data/sensores/leituras.jsonl",
+    "filename": "data/sensores/leituras.jsonl",
+    "filenameType": "str",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 700,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "g_fcsv",
+    "type": "function",
+    "z": "tab_grav",
+    "name": "preparar CSV",
+    "func": "// Prepara a linha CSV (sensor;seq;ts;temp;hum;origem)\nconst p = msg.payload;\nmsg.payload = { sensor: p.sensor, seq: p.seq, ts: p.ts, temp: p.temp, hum: p.hum, origem: p.origem };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 410,
+    "y": 140,
+    "wires": [
+      [
+        "g_csv"
+      ]
+    ]
+  },
+  {
+    "id": "g_csv",
+    "type": "csv",
+    "z": "tab_grav",
+    "name": "CSV (;)",
+    "sep": ";",
+    "hdrin": "",
+    "hdrout": "none",
+    "multi": "one",
+    "ret": "\\n",
+    "temp": "sensor,seq,ts,temp,hum,origem",
+    "skip": "0",
+    "strings": true,
+    "include_empty_strings": "",
+    "include_null_values": "",
+    "x": 580,
+    "y": 140,
+    "wires": [
+      [
+        "g_fcsvout"
+      ]
+    ]
+  },
+  {
+    "id": "g_fcsvout",
+    "type": "file",
+    "z": "tab_grav",
+    "name": "data/sensores/leituras.csv",
+    "filename": "data/sensores/leituras.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 790,
+    "y": 140,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "g_dbg2",
+    "type": "debug",
+    "z": "tab_grav",
+    "name": "ver leitura",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload.temp",
+    "statusType": "msg",
+    "x": 400,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "cfg_broker",
+    "type": "mqtt-broker",
+    "name": "Mosquitto local",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "closeTopic": "",
+    "willTopic": ""
+  }
+]
